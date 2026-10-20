@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tensile Testing Laboratory</title>
+<meta name="description" content="Interactive virtual tensile testing laboratory for undergraduate mechanical engineering: specimen, testing machine and live engineering stress–strain curve. Simulated educational data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the laboratory</a>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 48 20" aria-hidden="true"><path d="M2 3h10c3 0 4 4 7 4h10c3 0 4-4 7-4h10v14H36c-3 0-4-4-7-4H19c-3 0-4 4-7 4H2z"/><path class="brand-gauge" d="M19 3v14M29 3v14"/></svg>
+    <div>
+      <h1>Tensile Testing Laboratory</h1>
+      <p class="brand-sub">Virtual lab for engineering stress–strain behaviour</p>
+    </div>
+  </div>
+  <p class="sim-flag" id="simFlag"><span class="sim-dot" aria-hidden="true"></span><strong>Simulated educational data.</strong> Representative material models, not experimental measurements.</p>
+  <nav class="modes" aria-label="Laboratory mode">
+    <div role="tablist" id="modeTabs">
+      <button role="tab" id="tab-lab" aria-controls="view-lab" aria-selected="true" data-mode="lab">Free lab</button>
+      <button role="tab" id="tab-guided" aria-controls="view-lab" aria-selected="false" data-mode="guided" tabindex="-1">Guided test</button>
+      <button role="tab" id="tab-compare" aria-controls="view-lab" aria-selected="false" data-mode="compare" tabindex="-1">Compare materials</button>
+      <button role="tab" id="tab-activities" aria-controls="view-activities" aria-selected="false" data-mode="activities" tabindex="-1">Activities</button>
+      <button role="tab" id="tab-notes" aria-controls="view-notes" aria-selected="false" data-mode="notes" tabindex="-1">Model &amp; guide</button>
+    </div>
+  </nav>
+</header>
+
+<div class="loadfail" id="loadFail" hidden></div>
+
+<main id="main">
+<!-- ===================== LABORATORY ===================== -->
+<section id="view-lab" class="lab" role="tabpanel" aria-labelledby="tab-lab">
+
+  <!-- Machine -->
+  <section class="panel p-machine" aria-labelledby="h-machine">
+    <div class="panel-head">
+      <h2 id="h-machine">Testing machine</h2>
+      <div class="tools" role="group" aria-label="Machine view options">
+        <div class="seg" role="radiogroup" aria-label="View type">
+          <button type="button" role="radio" aria-checked="true" id="view3dBtn" data-view="3d">3D</button>
+          <button type="button" role="radio" aria-checked="false" id="view2dBtn" data-view="2d">2D</button>
+        </div>
+        <div class="seg" role="group" aria-label="Camera">
+          <button type="button" id="viewWhole" title="Show the whole machine">Whole</button>
+          <button type="button" id="viewClose" title="Close-up of the gauge length">Gauge close-up</button>
+        </div>
+        <label class="mini-field" for="exag"><span>Visual exaggeration <span class="term" data-term="exaggeration" tabindex="0">?</span></span>
+          <select id="exag">
+            <option value="1">True scale ×1</option>
+            <option value="10">Elastic strain ×10</option>
+            <option value="25">Elastic strain ×25</option>
+            <option value="50">Elastic strain ×50</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="viewport" id="viewport">
+      <div id="view3d" class="view-host"></div>
+      <div id="view2d" class="view-host" hidden></div>
+      <div id="labels3d" class="labels3d" aria-hidden="true"></div>
+      <div class="stage-badge" id="stageBadge" aria-hidden="true"><span class="stage-num">0</span><span class="stage-name">Undeformed</span></div>
+      <p class="exag-badge" id="exagBadge" hidden><strong>Display exaggerated:</strong> elastic strain ×<span id="exagVal">1</span>. Readouts and graph show true values.</p>
+      <dl class="readouts" id="readouts" aria-label="Instrument readouts">
+        <div><dt>Load cell</dt><dd><span id="roF">0.00</span> kN</dd></div>
+        <div><dt>Extensometer ΔL</dt><dd><span id="roDL">0.000</span> mm</dd></div>
+        <div><dt>Crosshead δ</dt><dd><span id="roX">0.000</span> mm</dd></div>
+      </dl>
+      <p class="view-hint" id="viewHint">Drag to rotate · scroll to zoom</p>
+    </div>
+    <div class="panel-foot">
+      <label class="check"><input type="checkbox" id="optAnnot" checked> Annotations</label>
+      <label class="check"><input type="checkbox" id="optReadouts" checked> Instrument readouts</label>
+      <span class="foot-note" id="viewNote">Shape is an approximate geometric animation, not a finite-element prediction.</span>
+    </div>
+  </section>
+
+  <!-- Graph -->
+  <section class="panel p-graph" aria-labelledby="h-graph">
+    <div class="panel-head">
+      <h2 id="h-graph">Engineering stress–strain curve</h2>
+      <div class="tools" role="group" aria-label="Graph options">
+        <div class="seg" role="radiogroup" aria-label="Graph range">
+          <button type="button" role="radio" aria-checked="true" data-zoom="full" id="zoomFull">Full curve</button>
+          <button type="button" role="radio" aria-checked="false" data-zoom="elastic" id="zoomElastic">Elastic region</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Strain units">
+          <button type="button" role="radio" aria-checked="true" data-unit="%">%</button>
+          <button type="button" role="radio" aria-checked="false" data-unit="mm">mm/mm</button>
+        </div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chart" role="img" aria-label="Engineering stress against engineering strain for the current test. Values are listed in the measurements panel."></canvas></div>
+    <div class="panel-foot">
+      <label class="check"><input type="checkbox" id="optE" checked> <span class="term" data-term="E" tabindex="0">Young's modulus</span> slope</label>
+      <label class="check"><input type="checkbox" id="optOffset" checked> <span class="term" data-term="offset" tabindex="0">Offset line</span></label>
+      <label class="check"><input type="checkbox" id="optUnload" checked> Unloading guide</label>
+      <label class="check"><input type="checkbox" id="optTrue"> <span class="term" data-term="true" tabindex="0">True stress</span> overlay</label>
+      <span class="foot-note" id="graphNote">Hover the curve to read values.</span>
+    </div>
+  </section>
+
+  <!-- Console: controls, measurements, context -->
+  <section class="panel p-console" aria-label="Controls, measurements and explanations">
+
+    <!-- Controls -->
+    <div class="col col-ctl">
+      <h2 class="col-title">Set up and run</h2>
+
+      <fieldset class="group">
+        <legend>Material</legend>
+        <label class="field" for="material"><span class="sr-only">Material</span>
+          <select id="material"></select>
+        </label>
+        <p class="hint" id="materialHint"></p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Specimen <span class="legend-note">round, machined</span></legend>
+        <div class="row2">
+          <label class="field" for="d0"><span>Diameter d₀ (mm)</span>
+            <input id="d0" type="number" inputmode="decimal" min="4" max="20" step="0.5" value="10" aria-describedby="d0Err">
+          </label>
+          <label class="field" for="L0"><span><span class="term" data-term="gauge" tabindex="0">Gauge length</span> L₀ (mm)</span>
+            <input id="L0" type="number" inputmode="decimal" min="20" max="250" step="1" value="50" aria-describedby="L0Err">
+          </label>
+        </div>
+        <p class="err" id="d0Err" role="alert"></p>
+        <p class="err" id="L0Err" role="alert"></p>
+        <p class="calc" id="areaCalc">S₀ = πd₀²/4 = 78.54 mm²</p>
+        <p class="calc" id="propCalc"></p>
+        <button type="button" class="btn ghost small" id="makeProp">Set proportional L₀ = 5.65√S₀</button>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Run the test</legend>
+        <div class="seg wide" role="radiogroup" aria-label="Test mode">
+          <button type="button" role="radio" aria-checked="true" data-run="auto" id="runAuto">Automatic</button>
+          <button type="button" role="radio" aria-checked="false" data-run="manual" id="runManual">Manual exploration</button>
+        </div>
+        <div class="btnrow">
+          <button type="button" class="btn primary" id="playBtn"><span class="ic" aria-hidden="true">▶</span> <span class="lbl">Start test</span></button>
+          <button type="button" class="btn" id="resetBtn"><span class="ic" aria-hidden="true">↺</span> Reset</button>
+        </div>
+        <div class="btnrow">
+          <button type="button" class="btn" id="stepBack" aria-label="Step back"><span aria-hidden="true">◀</span> Step</button>
+          <button type="button" class="btn" id="stepFwd" aria-label="Step forward">Step <span aria-hidden="true">▶</span></button>
+          <button type="button" class="btn" id="unloadBtn">Unload</button>
+          <button type="button" class="btn" id="reloadBtn">Reload</button>
+        </div>
+        <p class="hint" id="runHint">Space: start/pause · ←/→: step · U: unload</p>
+        <label class="check"><input type="checkbox" id="pauseStages"> Pause at each new stage</label>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Progress</legend>
+        <div class="progress">
+          <input type="range" id="progress" min="0" max="1000" value="0" step="1" aria-label="Test progress (simulated test time)" aria-valuetext="0 seconds">
+          <div class="ticks" id="progressTicks" aria-hidden="true"></div>
+        </div>
+        <p class="calc" id="timeCalc">Simulated test time 0.0 s</p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Speed</legend>
+        <label class="field" for="playback"><span>Animation playback <span class="term" data-term="playback" tabindex="0">?</span></span>
+          <select id="playback">
+            <option value="1">×1 (real time)</option>
+            <option value="2">×2</option>
+            <option value="5">×5</option>
+            <option value="10" selected>×10</option>
+            <option value="25">×25</option>
+            <option value="50">×50</option>
+          </select>
+        </label>
+        <p class="hint">Changes only how fast you watch. It does not change the test.</p>
+        <div class="row2">
+          <label class="field" for="rate1"><span>Strain rate to yield <span class="term" data-term="rate" tabindex="0">?</span></span>
+            <select id="rate1"></select>
+          </label>
+          <label class="field" for="rate2"><span>Strain rate after yield</span>
+            <select id="rate2"></select>
+          </label>
+        </div>
+        <p class="hint" id="rateHint"></p>
+      </fieldset>
+    </div>
+
+    <!-- Measurements -->
+    <div class="col col-meas" aria-labelledby="h-meas">
+      <h2 class="col-title" id="h-meas">Measurements</h2>
+      <p class="meas-flag">Simulated values</p>
+      <h3 class="sub">Live readings</h3>
+      <dl class="meas" id="measLive">
+        <div><dt>Applied force, F</dt><dd><span id="mF">0.00</span> <abbr title="kilonewtons">kN</abbr></dd></div>
+        <div><dt><span class="term" data-term="engStress" tabindex="0">Engineering stress</span>, σ = F/S₀</dt><dd><span id="mS">0.0</span> MPa</dd></div>
+        <div><dt><span class="term" data-term="engStrain" tabindex="0">Engineering strain</span>, e = ΔL/L₀</dt><dd><span id="mE">0.000 %</span></dd></div>
+        <div><dt>Extension over L₀, ΔL</dt><dd><span id="mDL">0.000</span> mm</dd></div>
+        <div><dt>Original gauge length, L₀</dt><dd><span id="mL0">50.00</span> mm</dd></div>
+        <div><dt id="mLlabel">Current gauge length, L</dt><dd><span id="mL">50.000</span> mm</dd></div>
+        <div><dt>Original area, S₀</dt><dd><span id="mA0">78.54</span> mm²</dd></div>
+        <div class="dim"><dt><span class="term" data-term="crosshead" tabindex="0">Crosshead displacement</span>, δ</dt><dd><span id="mX">0.000</span> mm</dd></div>
+        <div class="dim"><dt>Minimum diameter, d</dt><dd><span id="mD">10.000</span> mm</dd></div>
+      </dl>
+      <h3 class="sub">Properties determined from this test</h3>
+      <dl class="meas" id="measDet">
+        <div><dt><span class="term" data-term="E" tabindex="0">Young's modulus</span>, E</dt><dd><span id="dE">—</span></dd></div>
+        <div id="dYieldRow"><dt id="dYieldLabel">Yield strength</dt><dd><span id="dY">—</span></dd></div>
+        <div id="dYield2Row" hidden><dt id="dYield2Label">Lower yield strength, ReL</dt><dd><span id="dY2">—</span></dd></div>
+        <div><dt><span class="term" data-term="uts" tabindex="0">Tensile strength (UTS)</span>, Rm</dt><dd><span id="dRm">—</span></dd></div>
+        <div><dt>Maximum force, Fm</dt><dd><span id="dFm">—</span></dd></div>
+        <div><dt><span class="term" data-term="A" tabindex="0">Elongation after fracture</span>, A</dt><dd><span id="dA">—</span></dd></div>
+        <div><dt><span class="term" data-term="Z" tabindex="0">Reduction of area</span>, Z</dt><dd><span id="dZ">—</span></dd></div>
+      </dl>
+      <h3 class="sub">True values at the minimum section</h3>
+      <dl class="meas" id="measTrue">
+        <div class="dim"><dt><span class="term" data-term="true" tabindex="0">True stress</span>, σ<sub>t</sub> = F/S</dt><dd><span id="tS">0.0</span> MPa</dd></div>
+        <div class="dim"><dt>True strain, ε<sub>t</sub></dt><dd><span id="tE">0.0000</span></dd></div>
+      </dl>
+    </div>
+
+    <!-- Context: explanation / guided / compare / results -->
+    <div class="col col-ctx">
+      <div class="ctx-tabs" role="tablist" aria-label="Explanation panels" id="ctxTabs">
+        <button role="tab" id="ctab-explain" aria-controls="ctx-explain" aria-selected="true" data-ctx="explain">Explanation</button>
+        <button role="tab" id="ctab-guided" aria-controls="ctx-guided" aria-selected="false" data-ctx="guided" tabindex="-1" hidden>Guided test</button>
+        <button role="tab" id="ctab-compare" aria-controls="ctx-compare" aria-selected="false" data-ctx="compare" tabindex="-1" hidden>Comparison</button>
+        <button role="tab" id="ctab-results" aria-controls="ctx-results" aria-selected="false" data-ctx="results" tabindex="-1">Results</button>
+      </div>
+      <div class="ctx-panel" id="ctx-explain" role="tabpanel" aria-labelledby="ctab-explain" tabindex="0"></div>
+      <div class="ctx-panel" id="ctx-guided" role="tabpanel" aria-labelledby="ctab-guided" tabindex="0" hidden></div>
+      <div class="ctx-panel" id="ctx-compare" role="tabpanel" aria-labelledby="ctab-compare" tabindex="0" hidden></div>
+      <div class="ctx-panel" id="ctx-results" role="tabpanel" aria-labelledby="ctab-results" tabindex="0" hidden></div>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== ACTIVITIES ===================== -->
+<section id="view-activities" class="activities" role="tabpanel" aria-labelledby="tab-activities" hidden>
+  <div class="act-intro">
+    <h2>Student activities</h2>
+    <p>Three short activities. Each one uses the same simulated material models as the laboratory, so your answers can be checked against the simulation.</p>
+  </div>
+  <div class="act-tabs" role="tablist" aria-label="Activities" id="actTabs">
+    <button role="tab" id="atab-1" aria-controls="act-1" aria-selected="true" data-act="1"><span class="act-n">1</span> Predict the behaviour</button>
+    <button role="tab" id="atab-2" aria-controls="act-2" aria-selected="false" data-act="2" tabindex="-1"><span class="act-n">2</span> Identify the regions</button>
+    <button role="tab" id="atab-3" aria-controls="act-3" aria-selected="false" data-act="3" tabindex="-1"><span class="act-n">3</span> Calculate properties</button>
+  </div>
+  <div class="act-panel panel" id="act-1" role="tabpanel" aria-labelledby="atab-1"></div>
+  <div class="act-panel panel" id="act-2" role="tabpanel" aria-labelledby="atab-2" hidden></div>
+  <div class="act-panel panel" id="act-3" role="tabpanel" aria-labelledby="atab-3" hidden></div>
+</section>
+
+<!-- ===================== NOTES ===================== -->
+<section id="view-notes" class="notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
+  <div class="notes-body panel" id="notesBody"></div>
+</section>
+</main>
+
+<footer class="foot">
+  <p>All values are simulated for teaching. The material models are representative of the named grades and are not design data. Standards are referenced conceptually (ISO 6892-1, ASTM E8/E8M); this is not a standards-compliant test.</p>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="srLive" aria-live="polite"></div>
+
+<script src="js/loader.js"></script>
+</body>
+</html>
